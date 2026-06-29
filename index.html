@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CIRCLR 3D Visualizer</title>
+    <style>
+        body {
+            margin: 0; padding: 0; overflow: hidden;
+            background-color: #0d0f12;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            touch-action: none;
+        }
+        #canvas-container { width: 100vw; height: 100vh; }
+        
+        /* Modern Meditative Preloader Screen */
+        #loading {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background-color: #0d0f12;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            color: #ffffff;
+            z-index: 9999;
+            transition: opacity 0.6s ease, pointer-events 0.6s ease;
+        }
+
+        /* Pure CSS Concentric Circle Spinner */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+        }
+
+        .loading-text {
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            opacity: 0.5;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Mobile-optimized Stacked UI */
+        #ui-layer-control {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 24, 30, 0.9);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 260px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            z-index: 10;
+        }
+
+        .ui-row {
+            display: flex; justify-content: space-between;
+            font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.6;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none; width: 100%; height: 4px;
+            background: rgba(255,255,255,0.2); border-radius: 2px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 22px; height: 22px;
+            background: #fff; border-radius: 50%; cursor: pointer;
+        }
+
+        .btn-group { display: flex; flex-direction: column; gap: 10px; }
+        
+        .ui-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            outline: none;
+        }
+        .ui-btn:all { background: rgba(255, 255, 255, 0.1); }
+        .ui-btn:active { background: rgba(255, 255, 255, 0.2); transform: scale(0.98); }
+    </style>
+</head>
+<body>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading 3D Workspace...</div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+   <div id="ui-layer-control">
+    <div class="ui-row"><span>Layer Spacing</span><span id="spacing-val">0.15</span></div>
+    <input type="range" id="spacing-slider" min="0.0" max="0.5" step="0.01" value="0.15">
+    
+    <div class="ui-row"><span>Camera Zoom</span></div>
+    <input type="range" id="zoom-slider" min="0" max="100" step="1" value="50">
+    
+    <div class="btn-group">
+        <button id="reset-btn" class="ui-btn">Reset View (Auto-Spin)</button>
+        <button id="center-btn" class="ui-btn">Camera Center (Mandala)</button>
+        <button id="hide-ui-btn" class="ui-btn" style="background: rgba(255,55,55,0.1); border-color: rgba(255,55,55,0.2);">Hide UI for Screenshot</button>
+    </div>
+</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+ <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const LAYER_URLS = [
+        'images/1024/layer05_1024.png', 
+        'images/1024/layer06_1024.png', 
+        'images/1024/layer07_1024.png', 
+        'images/1024/layer08_1024.png', 
+        'images/1024/layer09_1024.png',
+        'images/1024/layer10_1024.png',
+         'images/1024/layer11_1024.png', 
+          'images/1024/layer12_1024.png', 
+           'images/1024/layer13_1024.png', 
+            'images/1024/layer14_1024.png', 
+            'images/1024/layer15_1024.png', 
+             'images/1024/layer16_1024.png', 
+              'images/1024/layer17_1024.png', 
+               'images/1024/layer18_1024.png', 
+                'images/1024/layer19_1024.png', 
+                 'images/1024/layer20_1024.png', 
+                  'images/1024/layer21_1024.png', 
+                   'images/1024/layer22_1024.png', 
+                    'images/1024/layer23_1024.png', 
+                     'images/1024/layer24_1024.png', 
+                      'images/1024/layer25_1024.png', 
+                       'images/1024/layer26_1024.png', 
+                        'images/1024/layer27_1024.png',  
+                        'images/1024/layer28_1024.png', 
+                        'images/1024/layer29_1024.png', 
+                        'images/1024/layer30_1024.png', 
+                        'images/1024/layer31_1024.png', 
+                        'images/1024/layer32_1024.png', 
+                        'images/1024/layer33_1024.png', 
+                        'images/1024/layer34_1024.png', 
+                        'images/1024/layer35_1024.png', 
+                        'images/1024/layer36_1024.png', 
+                        'images/1024/layer37_1024.png', 
+                        'images/1024/layer38_1024.png', 
+                        'images/1024/layer39_1024.png', 
+                        'images/1024/layer40_1024.png', 
+                        'images/1024/layer41_1024.png' 
+         
+    ];
+
+    // Camera starts at the position you manually spin to for the correct view
+    const ANGLED_CAM_POS = { x: 0, y: 6, z: -10 }; 
+    const FLAT_CAM_POS = { x: 0, y: 0, z: -11 };
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(ANGLED_CAM_POS.x, ANGLED_CAM_POS.y, ANGLED_CAM_POS.z);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.autoRotate = true;       
+    controls.autoRotateSpeed = 0.4;  
+
+    // Establish hard limits for manual mouse wheel / pinch gestures
+    controls.minDistance = 4;
+    controls.maxDistance = 20;
+
+    controls.addEventListener('start', () => {
+        controls.autoRotate = false;
+    });
+
+    // Sync the HTML slider value if the user zooms using mouse wheel or pinch gestures instead
+    controls.addEventListener('change', () => {
+        const zoomSlider = document.getElementById('zoom-slider');
+        if (zoomSlider) {
+            const distance = camera.position.distanceTo(controls.target);
+            zoomSlider.value = distance;
+        }
+    });
+
+    const textureLoader = new THREE.TextureLoader();
+    const meshesArray = [];
+    let currentSpacing = 0.15;
+
+    LAYER_URLS.forEach((url, index) => {
+        textureLoader.load(url, (texture) => {
+            const geometry = new THREE.PlaneGeometry(4, 4);
+            
+            const material = new THREE.MeshBasicMaterial({
+                map: texture, 
+                transparent: true, 
+                side: THREE.DoubleSide, 
+                depthWrite: true,
+                depthTest: true
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.userData.index = index;
+            scene.add(mesh);
+            meshesArray.push(mesh);
+            
+texture.dispose();
+
+            if(meshesArray.length === LAYER_URLS.length) {
+                meshesArray.sort((a,b) => a.userData.index - b.userData.index);
+                updatePositions();
+                const loaderEl = document.getElementById('loading');
+                if(loaderEl) {
+                    loaderEl.style.opacity = '0';
+                    loaderEl.style.pointerEvents = 'none';
+                }
+            }
+        });
+    });
+
+    function updatePositions() {
+        const startZ = ((meshesArray.length - 1) * currentSpacing) / 2;
+        meshesArray.forEach((m, i) => m.position.z = startZ - (i * currentSpacing));
+    }
+
+    // Camera Center (Mandala View)
+    document.getElementById('center-btn').addEventListener('click', () => {
+        controls.autoRotate = false; 
+        camera.position.set(FLAT_CAM_POS.x, FLAT_CAM_POS.y, FLAT_CAM_POS.z);
+        controls.target.set(0, 0, 0);
+        controls.update();
+    });
+
+    // Reset View (Angled View)
+    document.getElementById('reset-btn').addEventListener('click', () => {
+        camera.position.set(ANGLED_CAM_POS.x, ANGLED_CAM_POS.y, ANGLED_CAM_POS.z);
+        controls.target.set(0, 0, 0);
+        controls.autoRotate = true; 
+        controls.update();
+    });
+
+    document.getElementById('spacing-slider').addEventListener('input', (e) => {
+        currentSpacing = parseFloat(e.target.value);
+        document.getElementById('spacing-val').textContent = currentSpacing.toFixed(2);
+        updatePositions();
+    });
+
+controls.minDistance = 0.001; // Allows the camera to practically touch the canvas
+controls.maxDistance = 25;
+
+// Function to map the 0-100 slider value to an exponential camera distance
+function sliderToDistance(value) {
+    const minDst = 0.01; // Extreme close up (full screen layer)
+    const maxDst = 20.0; // Far away view
+    // Exponential curve mapping
+    return minDst * Math.pow(maxDst / minDst, value / 100);
+}
+
+// Function to map a physical camera distance back to the 0-100 slider position
+function distanceToSlider(distance) {
+    const minDst = 0.01;
+    const maxDst = 20.0;
+    return (Math.log(distance / minDst) / Math.log(maxDst / minDst)) * 100;
+}
+
+// --- Dynamic Slider Input Handler ---
+document.getElementById('zoom-slider').addEventListener('input', (e) => {
+    const targetDistance = sliderToDistance(parseFloat(e.target.value));
+    
+    const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+    camera.position.copy(controls.target).addScaledVector(direction, targetDistance);
+    controls.update();
+});
+// --- Keep Slider In Sync with Mouse Wheel / Trackpad Gestures ---
+controls.addEventListener('change', () => {
+    const zoomSlider = document.getElementById('zoom-slider');
+    if (zoomSlider) {
+        const distance = camera.position.distanceTo(controls.target);
+        // Sync back using the inverse exponential mapping
+        zoomSlider.value = distanceToSlider(distance);
+    }
+});
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // --- SUBTLE SCREENSHOT MODE (FADE TRANSITION) ---
+const uiPanel = document.getElementById('ui-layer-control');
+const hideBtn = document.getElementById('hide-ui-btn');
+let isUiHidden = false;
+let isDraggingCanvas = false;
+
+if (uiPanel && hideBtn) {
+    // 1. Smoothly fade the entire UI out of existence
+    hideBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        uiPanel.style.transition = 'opacity 0.4s ease';
+        uiPanel.style.opacity = '0';
+        uiPanel.style.pointerEvents = 'none'; // Prevents invisible buttons from being clicked
+        
+        // Delay setting state slightly so the click doesn't instantly trigger the canvas wake-up
+        setTimeout(() => { isUiHidden = true; }, 100);
+    });
+
+    // 2. Track canvas drags so moving the 3D model doesn't accidentally bring back the UI
+    window.addEventListener('mousedown', () => { isDraggingCanvas = false; });
+    window.addEventListener('mousemove', () => { isDraggingCanvas = true; });
+    window.addEventListener('touchstart', () => { isDraggingCanvas = false; });
+    window.addEventListener('touchmove', () => { isDraggingCanvas = true; });
+
+    // 3. Tap anywhere on the empty workspace to bring the UI back cleanly
+    window.addEventListener('mouseup', (e) => {
+        if (isUiHidden && !isDraggingCanvas) {
+            uiPanel.style.opacity = '1';
+            uiPanel.style.pointerEvents = 'auto';
+            isUiHidden = false;
+        }
+    });
+
+    window.addEventListener('touchend', (e) => {
+        if (isUiHidden && !isDraggingCanvas) {
+            uiPanel.style.opacity = '1';
+            uiPanel.style.pointerEvents = 'auto';
+            isUiHidden = false;
+        }
+    });
+}
+</script>
+</body>
+</html>
