@@ -13,7 +13,6 @@
         }
         #canvas-container { width: 100vw; height: 100vh; }
         
-        /* Modern Meditative Preloader Screen */
         #loading {
             position: absolute;
             top: 0; left: 0;
@@ -29,7 +28,6 @@
             transition: opacity 0.6s ease, pointer-events 0.6s ease;
         }
 
-        /* Pure CSS Concentric Circle Spinner */
         .spinner {
             width: 40px;
             height: 40px;
@@ -51,7 +49,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Mobile-optimized Stacked UI */
         #ui-layer-control {
             position: absolute;
             bottom: 40px;
@@ -184,7 +181,6 @@
          
     ];
 
-    // Camera starts at the position you manually spin to for the correct view
     const ANGLED_CAM_POS = { x: 0, y: 6, z: -10 }; 
     const FLAT_CAM_POS = { x: 0, y: 0, z: -11 };
 
@@ -202,7 +198,6 @@
     controls.autoRotate = true;       
     controls.autoRotateSpeed = 0.4;  
 
-    // Establish hard limits for manual mouse wheel / pinch gestures
     controls.minDistance = 4;
     controls.maxDistance = 20;
 
@@ -210,7 +205,6 @@
         controls.autoRotate = false;
     });
 
-    // Sync the HTML slider value if the user zooms using mouse wheel or pinch gestures instead
     controls.addEventListener('change', () => {
         const zoomSlider = document.getElementById('zoom-slider');
         if (zoomSlider) {
@@ -259,7 +253,6 @@ texture.dispose();
         meshesArray.forEach((m, i) => m.position.z = startZ - (i * currentSpacing));
     }
 
-    // Camera Center (Mandala View)
     document.getElementById('center-btn').addEventListener('click', () => {
         controls.autoRotate = false; 
         camera.position.set(FLAT_CAM_POS.x, FLAT_CAM_POS.y, FLAT_CAM_POS.z);
@@ -267,7 +260,6 @@ texture.dispose();
         controls.update();
     });
 
-    // Reset View (Angled View)
     document.getElementById('reset-btn').addEventListener('click', () => {
         camera.position.set(ANGLED_CAM_POS.x, ANGLED_CAM_POS.y, ANGLED_CAM_POS.z);
         controls.target.set(0, 0, 0);
@@ -281,25 +273,25 @@ texture.dispose();
         updatePositions();
     });
 
-controls.minDistance = 0.001; // Allows the camera to practically touch the canvas
+controls.minDistance = 0.001; 
 controls.maxDistance = 25;
 
-// Function to map the 0-100 slider value to an exponential camera distance
+
 function sliderToDistance(value) {
-    const minDst = 0.01; // Extreme close up (full screen layer)
-    const maxDst = 20.0; // Far away view
-    // Exponential curve mapping
+    const minDst = 0.01; 
+    const maxDst = 20.0; 
+
     return minDst * Math.pow(maxDst / minDst, value / 100);
 }
 
-// Function to map a physical camera distance back to the 0-100 slider position
+
 function distanceToSlider(distance) {
     const minDst = 0.01;
     const maxDst = 20.0;
     return (Math.log(distance / minDst) / Math.log(maxDst / minDst)) * 100;
 }
 
-// --- Dynamic Slider Input Handler ---
+
 document.getElementById('zoom-slider').addEventListener('input', (e) => {
     const targetDistance = sliderToDistance(parseFloat(e.target.value));
     
@@ -307,12 +299,12 @@ document.getElementById('zoom-slider').addEventListener('input', (e) => {
     camera.position.copy(controls.target).addScaledVector(direction, targetDistance);
     controls.update();
 });
-// --- Keep Slider In Sync with Mouse Wheel / Trackpad Gestures ---
+
 controls.addEventListener('change', () => {
     const zoomSlider = document.getElementById('zoom-slider');
     if (zoomSlider) {
         const distance = camera.position.distanceTo(controls.target);
-        // Sync back using the inverse exponential mapping
+
         zoomSlider.value = distanceToSlider(distance);
     }
 });
@@ -329,31 +321,29 @@ controls.addEventListener('change', () => {
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // --- SUBTLE SCREENSHOT MODE (FADE TRANSITION) ---
 const uiPanel = document.getElementById('ui-layer-control');
 const hideBtn = document.getElementById('hide-ui-btn');
 let isUiHidden = false;
 let isDraggingCanvas = false;
 
 if (uiPanel && hideBtn) {
-    // 1. Smoothly fade the entire UI out of existence
+
     hideBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         uiPanel.style.transition = 'opacity 0.4s ease';
         uiPanel.style.opacity = '0';
-        uiPanel.style.pointerEvents = 'none'; // Prevents invisible buttons from being clicked
+        uiPanel.style.pointerEvents = 'none'; 
         
-        // Delay setting state slightly so the click doesn't instantly trigger the canvas wake-up
+
         setTimeout(() => { isUiHidden = true; }, 100);
     });
 
-    // 2. Track canvas drags so moving the 3D model doesn't accidentally bring back the UI
+
     window.addEventListener('mousedown', () => { isDraggingCanvas = false; });
     window.addEventListener('mousemove', () => { isDraggingCanvas = true; });
     window.addEventListener('touchstart', () => { isDraggingCanvas = false; });
     window.addEventListener('touchmove', () => { isDraggingCanvas = true; });
 
-    // 3. Tap anywhere on the empty workspace to bring the UI back cleanly
     window.addEventListener('mouseup', (e) => {
         if (isUiHidden && !isDraggingCanvas) {
             uiPanel.style.opacity = '1';
